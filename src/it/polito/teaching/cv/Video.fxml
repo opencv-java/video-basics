@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+	
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.text.*?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml" fx:controller="it.polito.teaching.cv.VideoController">
+	<center>
+	   <ImageView fx:id="currentFrame" />
+   </center>
+   <right>
+      <VBox alignment="CENTER_LEFT" spacing="10">
+         <padding>
+            <Insets left="25" right="25"/>
+         </padding>
+         <ImageView fx:id="histogram" />
+         <Text text="Controls" />
+         <CheckBox fx:id="grayscale" text="Show in gray scale" />
+         <CheckBox fx:id="logoCheckBox" text="Show logo" onAction="#loadLogo" />
+      </VBox>
+   </right>
+   <bottom>
+      <HBox alignment="CENTER" >
+         <padding>
+            <Insets top="25" right="25" bottom="25" left="25"/>
+         </padding>
+         <Button fx:id="button" alignment="center" text="Start camera" onAction="#startCamera" />
+      </HBox>
+   </bottom>
+</BorderPane>
