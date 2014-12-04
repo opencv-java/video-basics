@@ -275,8 +275,19 @@ public class VideoController
 			}
 		}
 		
-		// display the whole
-		this.histogram.setImage(mat2Image(histImage));
+		// display the whole, on the FX thread
+		final Image histImg = mat2Image(histImage);
+		
+		Platform.runLater(new Runnable() {
+			
+			@Override
+			public void run()
+			{
+				histogram.setImage(histImg);
+				
+			}
+		});
+
 	}
 	
 	/**
