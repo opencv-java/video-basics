@@ -17,10 +17,11 @@ import org.opencv.core.Core;
  * histogram and it is possible to add a logo in a corner of the video.
  * 
  * @author <a href="mailto:luigi.derussis@polito.it">Luigi De Russis</a>
- * @since 2013-11-20
+ * @version 1.1 (2015-10-20)
+ * @since 1.0 (2013-11-20)
  * 
  */
-public class Lab3 extends Application
+public class Video extends Application
 {
 	@Override
 	public void start(Stage primaryStage)
@@ -36,7 +37,7 @@ public class Lab3 extends Application
 			scene.getStylesheets().add(getClass().getResource("application.css").toExternalForm());
 			// create the stage with the given title and the previously created
 			// scene
-			primaryStage.setTitle("Lab 3");
+			primaryStage.setTitle("Video processing");
 			primaryStage.setScene(scene);
 			// show the GUI
 			primaryStage.show();

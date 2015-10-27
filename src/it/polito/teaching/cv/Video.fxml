@@ -13,7 +13,7 @@
    <right>
       <VBox alignment="CENTER_LEFT" spacing="10">
          <padding>
-            <Insets left="25" right="25"/>
+            <Insets left="10" right="20"/>
          </padding>
          <ImageView fx:id="histogram" />
          <Text text="Controls" />

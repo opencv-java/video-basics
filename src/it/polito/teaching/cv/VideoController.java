@@ -3,17 +3,9 @@ package it.polito.teaching.cv;
 import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
-
-import javafx.application.Platform;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.SimpleObjectProperty;
-import javafx.fxml.FXML;
-import javafx.scene.control.Button;
-import javafx.scene.control.CheckBox;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
@@ -24,9 +16,15 @@ import org.opencv.core.MatOfInt;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
-import org.opencv.highgui.Highgui;
-import org.opencv.highgui.VideoCapture;
+import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
+import org.opencv.videoio.VideoCapture;
+
+import javafx.fxml.FXML;
+import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 
 /**
  * The controller associated with the only view of our application. The
@@ -35,8 +33,9 @@ import org.opencv.imgproc.Imgproc;
  * controls and the histogram creation.
  * 
  * @author <a href="mailto:luigi.derussis@polito.it">Luigi De Russis</a>
- * @since 2013-11-20
- * 
+ * @version 1.1 (2015-10-20)
+ * @since 1.0 (2013-11-20)
+ * 		
  */
 public class VideoController
 {
@@ -57,13 +56,22 @@ public class VideoController
 	private ImageView currentFrame;
 	
 	// a timer for acquiring the video stream
-	private Timer timer;
+	private ScheduledExecutorService timer;
 	// the OpenCV object that realizes the video capture
-	private VideoCapture capture = new VideoCapture();
+	private VideoCapture capture;
 	// a flag to change the button behavior
-	private boolean cameraActive = false;
+	private boolean cameraActive;
 	// the logo to be loaded
 	private Mat logo;
+	
+	/**
+	 * Initialize method, automatically called by @{link FXMLLoader}
+	 */
+	public void initialize()
+	{
+		this.capture = new VideoCapture();
+		this.cameraActive = false;
+	}
 	
 	/**
 	 * The action triggered by pushing the button on the GUI
@@ -71,10 +79,11 @@ public class VideoController
 	@FXML
 	protected void startCamera()
 	{
-		// bind an image property with the frame container
-		final ObjectProperty<Image> imageProp = new SimpleObjectProperty<>();
-		this.currentFrame.imageProperty().bind(imageProp);
-					
+		// set a fixed width for the frame
+		this.currentFrame.setFitWidth(600);
+		// preserve image ratio
+		this.currentFrame.setPreserveRatio(true);
+		
 		if (!this.cameraActive)
 		{
 			// start the video capture
@@ -86,25 +95,18 @@ public class VideoController
 				this.cameraActive = true;
 				
 				// grab a frame every 33 ms (30 frames/sec)
-				TimerTask frameGrabber = new TimerTask() {
+				Runnable frameGrabber = new Runnable() {
+					
 					@Override
 					public void run()
 					{
-						// update the image property => update the frame
-						// shown in the UI
-						final Image imageToShow = grabFrame();
-						Platform.runLater(new Runnable() {
-							
-							@Override
-							public void run()
-							{
-								imageProp.setValue(imageToShow);
-							}
-						});
+						Image imageToShow = grabFrame();
+						currentFrame.setImage(imageToShow);
 					}
 				};
-				this.timer = new Timer();
-				this.timer.schedule(frameGrabber, 0, 33);
+				
+				this.timer = Executors.newSingleThreadScheduledExecutor();
+				this.timer.scheduleAtFixedRate(frameGrabber, 0, 33, TimeUnit.MILLISECONDS);
 				
 				// update the button content
 				this.button.setText("Stop Camera");
@@ -121,14 +123,23 @@ public class VideoController
 			this.cameraActive = false;
 			// update again the button content
 			this.button.setText("Start Camera");
+			
 			// stop the timer
-			if (this.timer != null)
+			try
 			{
-				this.timer.cancel();
-				this.timer = null;
+				this.timer.shutdown();
+				this.timer.awaitTermination(33, TimeUnit.MILLISECONDS);
 			}
+			catch (InterruptedException e)
+			{
+				// log the exception
+				System.err.println("Exception in stopping the frame capture, trying to release the camera now... " + e);
+			}
+			
 			// release the camera
 			this.capture.release();
+			// clean the frame
+			this.currentFrame.setImage(null);
 		}
 	}
 	
@@ -141,7 +152,7 @@ public class VideoController
 		if (logoCheckBox.isSelected())
 		{
 			// read the logo only when the checkbox has been selected
-			this.logo = Highgui.imread("resources/Poli.png");
+			this.logo = Imgcodecs.imread("resources/Poli.png");
 		}
 	}
 	
@@ -177,7 +188,7 @@ public class VideoController
 						Core.addWeighted(imageROI, 1.0, logo, 0.8, 0.0, imageROI);
 						
 						// add the logo: method #2
-						//logo.copyTo(imageROI, logo);
+						// logo.copyTo(imageROI, logo);
 					}
 					
 					// if the grayscale checkbox is selected, convert the image
@@ -197,8 +208,8 @@ public class VideoController
 			}
 			catch (Exception e)
 			{
-				// log the (full) error
-				System.err.println("ERROR: " + e);
+				// log the error
+				System.err.println("Exception during the frame elaboration: " + e);
 			}
 		}
 		
@@ -261,32 +272,23 @@ public class VideoController
 		for (int i = 1; i < histSize.get(0, 0)[0]; i++)
 		{
 			// B component or gray image
-			Core.line(histImage, new Point(bin_w * (i - 1), hist_h - Math.round(hist_b.get(i - 1, 0)[0])), new Point(
-					bin_w * (i), hist_h - Math.round(hist_b.get(i, 0)[0])), new Scalar(255, 0, 0), 2, 8, 0);
+			Imgproc.line(histImage, new Point(bin_w * (i - 1), hist_h - Math.round(hist_b.get(i - 1, 0)[0])),
+					new Point(bin_w * (i), hist_h - Math.round(hist_b.get(i, 0)[0])), new Scalar(255, 0, 0), 2, 8, 0);
 			// G and R components (if the image is not in gray scale)
 			if (!gray)
 			{
-				Core.line(histImage, new Point(bin_w * (i - 1), hist_h - Math.round(hist_g.get(i - 1, 0)[0])),
+				Imgproc.line(histImage, new Point(bin_w * (i - 1), hist_h - Math.round(hist_g.get(i - 1, 0)[0])),
 						new Point(bin_w * (i), hist_h - Math.round(hist_g.get(i, 0)[0])), new Scalar(0, 255, 0), 2, 8,
 						0);
-				Core.line(histImage, new Point(bin_w * (i - 1), hist_h - Math.round(hist_r.get(i - 1, 0)[0])),
+				Imgproc.line(histImage, new Point(bin_w * (i - 1), hist_h - Math.round(hist_r.get(i - 1, 0)[0])),
 						new Point(bin_w * (i), hist_h - Math.round(hist_r.get(i, 0)[0])), new Scalar(0, 0, 255), 2, 8,
 						0);
 			}
 		}
 		
-		// display the whole, on the FX thread
-		final Image histImg = mat2Image(histImage);
-		
-		Platform.runLater(new Runnable() {
-			
-			@Override
-			public void run()
-			{
-				histogram.setImage(histImg);
-				
-			}
-		});
+		// display the histogram...
+		Image histImg = mat2Image(histImage);
+		this.histogram.setImage(histImg);
 
 	}
 	
@@ -302,10 +304,11 @@ public class VideoController
 		// create a temporary buffer
 		MatOfByte buffer = new MatOfByte();
 		// encode the frame in the buffer, according to the PNG format
-		Highgui.imencode(".png", frame, buffer);
+		Imgcodecs.imencode(".png", frame, buffer);
 		// build and return an Image created from the image encoded in the
 		// buffer
 		return new Image(new ByteArrayInputStream(buffer.toArray()));
 	}
+
 	
 }
