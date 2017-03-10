@@ -1,10 +1,12 @@
 package it.polito.teaching.cv;
 
 import javafx.application.Application;
+import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
 
 import org.opencv.core.Core;
 
@@ -17,7 +19,7 @@ import org.opencv.core.Core;
  * histogram and it is possible to add a logo in a corner of the video.
  * 
  * @author <a href="mailto:luigi.derussis@polito.it">Luigi De Russis</a>
- * @version 1.1 (2015-10-20)
+ * @version 2.0 (2017-03-10)
  * @since 1.0 (2013-11-20)
  * 
  */
@@ -41,6 +43,15 @@ public class Video extends Application
 			primaryStage.setScene(scene);
 			// show the GUI
 			primaryStage.show();
+			
+			// set the proper behavior on closing the application
+			VideoController controller = loader.getController();
+			primaryStage.setOnCloseRequest((new EventHandler<WindowEvent>() {
+				public void handle(WindowEvent we)
+				{
+					controller.setClosed();
+				}
+			}));
 			
 		}
 		catch (Exception e)

@@ -1,6 +1,5 @@
 package it.polito.teaching.cv;
 
-import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -10,7 +9,6 @@ import java.util.concurrent.TimeUnit;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
-import org.opencv.core.MatOfByte;
 import org.opencv.core.MatOfFloat;
 import org.opencv.core.MatOfInt;
 import org.opencv.core.Point;
@@ -20,6 +18,7 @@ import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.videoio.VideoCapture;
 
+import it.polito.elite.teaching.cv.utils.Utils;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
@@ -33,7 +32,7 @@ import javafx.scene.image.ImageView;
  * controls and the histogram creation.
  * 
  * @author <a href="mailto:luigi.derussis@polito.it">Luigi De Russis</a>
- * @version 1.1 (2015-10-20)
+ * @version 2.0 (2017-03-10)
  * @since 1.0 (2013-11-20)
  * 		
  */
@@ -100,8 +99,11 @@ public class VideoController
 					@Override
 					public void run()
 					{
-						Image imageToShow = grabFrame();
-						currentFrame.setImage(imageToShow);
+						// effectively grab and process a single frame
+						Mat frame = grabFrame();
+						// convert and show the frame
+						Image imageToShow = Utils.mat2Image(frame);
+						updateImageView(currentFrame, imageToShow);
 					}
 				};
 				
@@ -161,10 +163,8 @@ public class VideoController
 	 * 
 	 * @return the {@link Image} to show
 	 */
-	private Image grabFrame()
+	private Mat grabFrame()
 	{
-		// init everything
-		Image imageToShow = null;
 		Mat frame = new Mat();
 		
 		// check if the capture is open
@@ -200,9 +200,6 @@ public class VideoController
 					
 					// show the histogram
 					this.showHistogram(frame, grayscale.isSelected());
-					
-					// convert the Mat object (OpenCV) to Image (JavaFX)
-					imageToShow = mat2Image(frame);
 				}
 				
 			}
@@ -213,7 +210,7 @@ public class VideoController
 			}
 		}
 		
-		return imageToShow;
+		return frame;
 	}
 	
 	/**
@@ -287,27 +284,57 @@ public class VideoController
 		}
 		
 		// display the histogram...
-		Image histImg = mat2Image(histImage);
-		this.histogram.setImage(histImg);
+		Image histImg = Utils.mat2Image(histImage);
+		updateImageView(histogram, histImg);
 
 	}
 	
 	/**
-	 * Convert a Mat object (OpenCV) in the corresponding Image for JavaFX
-	 * 
-	 * @param frame
-	 *            the {@link Mat} representing the current frame
-	 * @return the {@link Image} to show
+	 * Stop the acquisition from the camera and release all the resources
 	 */
-	private Image mat2Image(Mat frame)
+	private void stopAcquisition()
 	{
-		// create a temporary buffer
-		MatOfByte buffer = new MatOfByte();
-		// encode the frame in the buffer, according to the PNG format
-		Imgcodecs.imencode(".png", frame, buffer);
-		// build and return an Image created from the image encoded in the
-		// buffer
-		return new Image(new ByteArrayInputStream(buffer.toArray()));
+		if (this.timer!=null && !this.timer.isShutdown())
+		{
+			try
+			{
+				// stop the timer
+				this.timer.shutdown();
+				this.timer.awaitTermination(33, TimeUnit.MILLISECONDS);
+			}
+			catch (InterruptedException e)
+			{
+				// log any exception
+				System.err.println("Exception in stopping the frame capture, trying to release the camera now... " + e);
+			}
+		}
+		
+		if (this.capture.isOpened())
+		{
+			// release the camera
+			this.capture.release();
+		}
+	}
+	
+	/**
+	 * Update the {@link ImageView} in the JavaFX main thread
+	 * 
+	 * @param view
+	 *            the {@link ImageView} to update
+	 * @param image
+	 *            the {@link Image} to show
+	 */
+	private void updateImageView(ImageView view, Image image)
+	{
+		Utils.onFXThread(view.imageProperty(), image);
+	}
+	
+	/**
+	 * On application close, stop the acquisition from the camera
+	 */
+	protected void setClosed()
+	{
+		this.stopAcquisition();
 	}
 
 	
