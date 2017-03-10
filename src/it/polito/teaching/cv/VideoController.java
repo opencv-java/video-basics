@@ -34,7 +34,7 @@ import javafx.scene.image.ImageView;
  * @author <a href="mailto:luigi.derussis@polito.it">Luigi De Russis</a>
  * @version 2.0 (2017-03-10)
  * @since 1.0 (2013-11-20)
- * 		
+ * 
  */
 public class VideoController
 {
@@ -127,21 +127,7 @@ public class VideoController
 			this.button.setText("Start Camera");
 			
 			// stop the timer
-			try
-			{
-				this.timer.shutdown();
-				this.timer.awaitTermination(33, TimeUnit.MILLISECONDS);
-			}
-			catch (InterruptedException e)
-			{
-				// log the exception
-				System.err.println("Exception in stopping the frame capture, trying to release the camera now... " + e);
-			}
-			
-			// release the camera
-			this.capture.release();
-			// clean the frame
-			this.currentFrame.setImage(null);
+			this.stopAcquisition();
 		}
 	}
 	
@@ -286,7 +272,7 @@ public class VideoController
 		// display the histogram...
 		Image histImg = Utils.mat2Image(histImage);
 		updateImageView(histogram, histImg);
-
+		
 	}
 	
 	/**
@@ -294,7 +280,7 @@ public class VideoController
 	 */
 	private void stopAcquisition()
 	{
-		if (this.timer!=null && !this.timer.isShutdown())
+		if (this.timer != null && !this.timer.isShutdown())
 		{
 			try
 			{
@@ -336,6 +322,5 @@ public class VideoController
 	{
 		this.stopAcquisition();
 	}
-
 	
 }
