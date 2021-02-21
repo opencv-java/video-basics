@@ -1,5 +1,7 @@
 ## Image manipulation with OpenCV and JavaFX
 
+[![No Maintenance Intended](http://unmaintained.tech/badge.svg)](http://unmaintained.tech/)
+
 *Computer Vision course - [Politecnico di Torino](http://www.polito.it)*
 
 A project, made in Eclipse (Neon), for capturing a video from a webcam and manipulating its frames: add a logo in the corner of the video player, convert the video in grayscale, and show the histogram of each frame.
